@@ -41,125 +41,41 @@ Under "Simulation", modify the Run Time (e.g., set to 1000ns).<br>
 **Verilog Code:** <br>
 **4:1 MUX Gate-Level Implementation:**
 ```
-
-module mux_4_1_gat(a,s,out);
-input [3:0]a;
-input [1:0]s;
-output out;
-wire [3:0]w;
-and (w[0],in[0],~s[1],~s[0]);
-and (w[1],in[1],~s[1],s[0]);
-and (w[2],in[2],s[1],~s[0]);
-and (w[3],in[3],s[1],s[0]);
-or (out,w[0],w[1],w[2],w[3]);
+module fom(y,i0,i1,i2,i3,s0,s1);
+output y;
+input i0,i1,i2,i3,s1,s0;
+wire sin,son,y1,y2,y3;
+not(sin,s1);
+not(son,s0);
+and(y0,sin,son,i0);
+and(y1,sin,s0,i1);
+and(y2,s1,son,i2);
+and(y3,s1,s0,i3);
+or(y,y0,y1,y2,y3);
 endmodule
+
 ```
 **4:1 MUX Data Flow Implementation:**
 ```
 
-module mux_4_1_dataflow (a,s,out);
-input [3:0]a;
-input [1:0]s;
-output out;
-assign out=s[1]==0?(s[0]==0?a[0]:a[1]):s[0]==0?a[2]:a[3];
-endmodule
 
 ```
 
 **4:1 MUX Behavioral Implementation:**
 ```
 
-module mux_4_1_behavioral (a,s,out);
-input [3:0]a;
-input [1:0]s;
-output reg out;
-    always @(*) begin
-        case ({S1, S0})
-            2'b00: out = a[0];
-            2'b01: out = a[1];
-            2'b10: out = a[2];
-            2'b11: out = a[3];
-            default: out = 1'bx;
-        endcase
-    end
-endmodule
+
 
 ```
 
 **4:1 MUX Structural Implementation:** <br>
 ```
 
-module mux2_to_1 (a,b,s,out);
-input s,a,b;
-output out;
-    assign out = s ? b : a;
-endmodule
-module mux4_to_1_structural (a,s,out);
-input [3:0]a;
-input [1:0]s;
-output out;
-    wire mux_low, mux_high;
-    mux2_to_1 mux0 (.a(a[0]), .b(a[1]), .s(s[0]), .out(mux_low));
-    mux2_to_1 mux1 (.a(a[2]), .b(a[3]), .s(s[0]), .out(mux_high));
-    mux2_to_1 mux_final (.a[0](mux_low), .a[1](mux_high), .s(s[1]), .out(out));
-endmodule
 
 ```
 
 **Testbench Implementation:**
-```
 
-`timescale 1ns / 1ps
-module mux4_to_1_tb;
-reg [3:0]a;
-reg [1:0]s;
-    wire out_gate;
-    wire out_dataflow;
-    wire out_behavioral;
-    wire out_structural;
-    mux4_to_1_gate uut_gate (
-        .a(a),
-        .s(s),
-        .out(out_gate)
-    );
-    mux4_to_1_dataflow uut_dataflow (
-        .a(a),
-        .s(s),
-        .out(out_dataflow)
-    );
-    mux_4_1_behavioral uut_behavioral (
-        .a(a),
-        .s(s),
-        .out(out_behavioral)
-    );
-    mux4_to_1_structural uut_structural (
-        .a(a),
-        .s(s),
-        .out(out_structural)
-    );
-initial begin
-        a[0] = 0; a[1] = 0; a[2] = 0; a[3] = 0; s[0] = 0; s[1] = 0;
-    #2 {s[1], s[0], a[0], a[1], a[2], a[3]} = 6'b00_0000; 
-    #2 {s[1], s[0], a[0], a[1], a[2], a[3]} = 6'b00_0001; 
-    #2 {s[1], s[0], a[0], a[1], a[2], a[3]} = 6'b01_0010; 
-    #2 {s[1], s[0], a[0], a[1], a[2], a[3]} = 6'b10_0100; 
-    #2 {s[1], s[0], a[0], a[1], a[2], a[3]} = 6'b11_1000; 
-    #2 {s[1], s[0], a[0], a[1], a[2], a[3]} = 6'b01_1100; 
-    #2 {s[1], s[0], a[0], a[1], a[2], a[3]} = 6'b10_1010; 
-    #2 {s[1], s[0], a[0], a[1], a[2], a[3]} = 6'b11_0110; 
-    #2 {s[1], s[0], a[0], a[1], a[2], a[3]} = 6'b00_1111; 
-    #2 $stop;
-end
-initial begin
-$monitor("Time=%0t | s[1]=%b s[0]=%b | Inputs: a[0]=%b a[1]=%b a[2]=%b a[3]=%b
-        | out_gate=%b | out_dataflow=%b | out_behavioral=%b | out_structural=%b",
-        $time, s[1], s[0], a[0], a[1], a[2], a[3], out_gate, out_dataflow,
-        out_behavioral, out_structural);
-end
-endmodule
-
-
-```
 **Sample Output:**
 ```
 
