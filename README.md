@@ -41,51 +41,48 @@ Under "Simulation", modify the Run Time (e.g., set to 1000ns).<br>
 **Verilog Code:** <br>
 **4:1 MUX Gate-Level Implementation:**
 ```
-module fom(a,s,out);
-input [3:0]a;
-input [1:0]s;
-output out;
-wire [3:0]w;
-and (w[0],a[0],~s[1],~s[0]);
-and (w[1],a[1],~s[1],s[0]);
-and (w[2],a[2],s[1],~s[0]);
-and (w[3],a[3],s[1],s[0]);
-or (out,w[0],w[1],w[2],w[3]);
+module mux4to1(I0,I1,I2,I3,S1,S2,Y);
+    input I0,I1,I2,I3,S1,S2;
+    output Y;
+    wire p,q,a,b,c,d;
+    not (p,S1);
+    not (q,S2);
+    and (a,I0,p,q);
+    and (b,I1,p,S2);
+    and (c,I2,S1,q);
+    and (d,I3,S1,S2);
+    or (Y,a,b,c,d);    
 endmodule
 
 ```
 **4:1 MUX Data Flow Implementation:**
 ```
-module mux4to1_dataflow (
-    output y,
-    input i0, i1, i2, i3,
-    input s0, s1
-);
-
-assign y = (~s1 & ~s0 & i0) |
-           (~s1 &  s0 & i1) |
-           ( s1 & ~s0 & i2) |
-           ( s1 &  s0 & i3);
-
+module mux4to1_df(A,B,C,D,S1,S0,Y);
+    input A,B,C,D,S1,S0;
+    output Y;
+    
+    assign Y =   (S1 == 0 && S0 == 0) ? A:
+                 (S1 == 0 && S0 == 1) ? B:
+                 (S1 == 1 && S0 == 0) ? C: 
+                 (S1 == 1 && S0 == 1) ? D: 1'b0;
+                                         
 endmodule
 
 ```
 
 **4:1 MUX Behavioral Implementation:**
 ```
-module behavemux(
-    output reg y,
-    input [3:0] i,
-    input [1:0] s
-);
-
+module mux4to1_bhv(I,S,Y);
+    input wire [0:3] I;
+    input wire [1:0] S;
+    output reg Y;
     always @(*) begin
-        case(s)
-            2'b00: y = i[0];
-            2'b01: y = i[1];
-            2'b10: y = i[2];
-            2'b11: y = i[3];
-            default: y = 1'bx; // Optional: Handles unknown select inputs
+        case (S)
+            2'b00: Y = I[0];
+            2'b01: Y = I[1];
+            2'b10: Y = I[2];
+            2'b11: Y = I[3];
+            default: Y = 1'b0;
         endcase
     end
 endmodule
@@ -93,203 +90,211 @@ endmodule
 
 **4:1 MUX Structural Implementation:** <br>
 ```
-// 2:1 MUX Component
-module mux2to1 (y, a, b, s);
-  input a, b, s;
-  output y;
-  assign y = (s==0)? a : b;
+module mux2to1(A,B,S,Y);
+    input A,B,S;
+    output Y;    
+    assign Y = (S) ? B : A;
 endmodule
 
-// 4:1 MUX Structural using 2:1 MUX
-module mux4to1_structural (y, i, s);
-  // Input i is a 4-bit vector (i[3], i[2], i[1], i[0])
-  // Input s is a 2-bit vector (s[1], s[0])
-  input [3:0] i; 
-  input [1:0] s;
-  output y;
-  wire y0, y1;
-
-  // m1 selects between i[0] and i[1] based on s[0]
-  mux2to1 m1(y0, i[0], i[1], s[0]);
-  // m2 selects between i[2] and i[3] based on s[0]
-  mux2to1 m2(y1, i[2], i[3], s[0]);
-  // m3 selects between y0 and y1 based on s[1]
-  mux2to1 m3(y, y0, y1, s[1]);
-endmodule
+module mux4to1_str(I,S,Y);
+    input [0:3]I;
+    input [1:0]S;
+    output Y;
+    wire y1,y2;
+    
+    mux2to1 m1(.A(I[0]), .B(I[1]), .S(S[0]), .Y(y1));
+    mux2to1 m2(.A(I[2]), .B(I[4]), .S(S[0]), .Y(y2));
+    
+    mux2to1 m3(.A(y1), .B(y1), .S(S[1]), .Y(Y));
+    
+endmodule    
 ```
 
 **Testbench Implementation:**
 **4:1 MUX Gate-Level Implementation:**
 ```
-`timescale 1ns / 1ps
-module fom_tb;
-
-    reg [3:0] a;
-    reg [1:0] s;
-    wire out;
-
-    // Assuming your design module is named `mux_4_1_behavioral` from the image
-    fom uut (
-        .a(a),
-        .s(s),
-        .out(out)
-    );
-
-    initial begin
-        $dumpfile("exact_match.vcd");
-        $dumpvars(0, fom_tb);
-
-        // Initial values at t=0
-        a = 4'b0000;
-        s = 2'b00;
-
-        // Apply stimuli to match the exact sequence from the waveform image
-        #2 {s, a} = 6'b00_0001;
-        #2 {s, a} = 6'b01_0010;
-        #2 {s, a} = 6'b10_0100;
-        #2 {s, a} = 6'b11_1000;
-        #2 {s, a} = 6'b01_1100;
-        #2 {s, a} = 6'b10_1010;
-        #2 {s, a} = 6'b11_0110;
-        #2 {s, a} = 6'b00_1111;
-
-        #2 $finish;
+module mux4to1_tb;
+    reg I0_t,I1_t,I2_t,I3_t,S1_t,S2_t;
+    wire Y_t;
+    mux4to1 dut(.I0(I0_t),.I1(I1_t),.I2(I2_t),.I3(I3_t),.S1(S1_t),.S2(S2_t),.Y(Y_t));
+    initial 
+    begin
+        I0_t = 1'b1;
+        I1_t = 1'b0;
+        I2_t = 1'b1;
+        I3_t = 1'b0;
+        S1_t = 1'b0;
+        S2_t = 1'b0;
+        #100
+        I0_t = 1'b1;
+        I1_t = 1'b0;
+        I2_t = 1'b1;
+        I3_t = 1'b0;
+        S1_t = 1'b0;
+        S2_t = 1'b1;
+        #100
+        I0_t = 1'b1;
+        I1_t = 1'b0;
+        I2_t = 1'b1;
+        I3_t = 1'b0;
+        S1_t = 1'b1;
+        S2_t = 1'b0;
+        #100
+        I0_t = 1'b1;
+        I1_t = 1'b0;
+        I2_t = 1'b1;
+        I3_t = 1'b0;
+        S1_t = 1'b1;
+        S2_t = 1'b1;
     end
-
-    initial begin
-        $monitor("Time=%0t | s=%b | a=%b | out=%b", $time, s, a, out);
-    end
-
 endmodule
+
 ```
 **4:1 MUX Data Flow Implementation:**
 ```
-`timescale 1ns / 1ps
-
-module tb_mux4to1_dataflow;
-
-    reg i0, i1, i2, i3;
-    reg s0, s1;
+module mux4to1_df_tb;
+    reg a,b,c,d,s1,s0;
     wire y;
-
-    mux4to1_dataflow uut (.y(y), .i0(i0), .i1(i1), .i2(i2), .i3(i3), .s0(s0), .s1(s1));
-
-    initial begin
-        i0=0; i1=0; i2=0; i3=0; s0=0; s1=0;
-        #10 i0=1; s0=0; s1=0;
-        #10 i1=1; s0=1; s1=0;
-        #10 i2=1; s0=0; s1=1;
-        #10 i3=1; s0=1; s1=1;
-        #10 $finish;
+    mux4to1_df dut(.A(a),.B(b),.C(c),.D(d),.S1(s1),.S0(s0),.Y(y));
+    initial 
+    begin
+        a = 1'b1;
+        b = 1'b0;
+        c = 1'b1;
+        d = 1'b0;
+        s1 = 1'b0;
+        s0 = 1'b0;
+        #100
+        a = 1'b1;
+        b = 1'b0;
+        c = 1'b1;
+        d = 1'b0;
+        s1 = 1'b0;
+        s0 = 1'b1;
+        #100
+        a = 1'b1;
+        b = 1'b0;
+        c = 1'b1;
+        d = 1'b0;
+        s1 = 1'b1;
+        s0 = 1'b0;
+        #100
+        a = 1'b1;
+        b = 1'b0;
+        c = 1'b1;
+        d = 1'b0;
+        s1 = 1'b1;
+        s0 = 1'b1;
     end
-
-    initial begin
-        $monitor("Time=%0t | s1=%b s0=%b | i0=%b i1=%b i2=%b i3=%b | y=%b",
-                 $time, s1, s0, i0, i1, i2, i3, y);
-    end
-
 endmodule
-
 ```
 
 **4:1 MUX Behavioral Implementation:**
 ```
-module behavemux_tb;
-
-    // Declare signals as vectors
-    reg [3:0] i;
-    reg [1:0] s;
-    wire y;
-
-    // Instantiate the Device Under Test (DUT)
-    behavemux dut (
-        .y(y),
-        .i(i),
-        .s(s)
-    );
-
-    initial begin
-        // Monitor the signals
-        $monitor("s=%b i=%b => y=%b", s, i, y);
-
-        // Set initial input values
-        i = 4'b1010;
-
-        // Apply stimuli for each select combination
-        s = 2'b00; #10;
-        s = 2'b01; #10;
-        s = 2'b10; #10;
-        s = 2'b11; #10;
-
-        $finish; // End the simulation
+module mux4to1_bhv_tb;
+    reg [0:3]I;
+    reg [1:0]S;
+    wire Y;
+    mux4to1_bhv dut(.I(I),.S(S),.Y(Y));
+    initial 
+    begin
+        I = 4'b1010;
+        S = 2'b00;
+        #100
+        I = 4'b1010;
+        S = 2'b01;
+        #100
+        I = 4'b1010;
+        S = 2'b10;
+        #100
+        I = 4'b1010;
+        S = 2'b11;
     end
 endmodule
 ```
 
 **4:1 MUX Structural Implementation:** <br>
 ```
-// Test Bench
-module tb_mux4to1_structural;
-  // Declare inputs as vectors
-  reg [3:0] i;
-  reg [1:0] s;
-  wire y;
-
-  // Instantiate the DUT with vector inputs
-  mux4to1_structural dut(.y(y), .i(i), .s(s));
-
-  initial begin
-    // Monitor the signals using vector notation
-    $monitor("s=%b i=%b => y=%b", s, i, y);
-
-    // Set all data inputs at once
-    i = 4'b0101; 
-
-    // Apply stimuli for each select combination
-    s = 2'b00; #10;
-    s = 2'b01; #10;
-    s = 2'b10; #10;
-    s = 2'b11; #10;
-
-    $finish;
-  end
+module mux4to1_str_tb;
+    reg [0:3]I;
+    reg [1:0]S;
+    wire Y;
+    
+    mux4to1_str dut(.I(I), .S(S), .Y(Y));
+    
+    initial
+    begin
+        I = 4'b1010;
+        S = 2'b00;
+        #100
+        I = 4'b1010;
+        S = 2'b01;
+        #100
+        I = 4'b1010;
+        S = 2'b10;
+        #100 
+        I = 4'b1010;
+        S = 2'b11;
+     end
 endmodule
 ```
 **Sample Output:**
+**4:1 MUX Gate-Level Implementation**
 ```
-
-Time=00 | s[1]=0 s[0]=0 | Inputs: a[0]=0 a[1]=0 a[2]=0 a[3]=0
-        | out_gate=0 | out_dataflow=0 | out_behavioral=0 | out_structural=0
-Time=04 | s[1]=0 s[0]=0 | Inputs: a[0]=1 a[1]=0 a[2]=0 a[3]=0
-        | out_gate=1 | out_dataflow=1 | out_behavioral=1 | out_structural=1
-Time=06 | s[1]=0 s[0]=1 | Inputs: a[0]=0 a[1]=1 a[2]=0 a[3]=0
-        | out_gate=1 | out_dataflow=1 | out_behavioral=1 | out_structural=1
-Time=08 | s[1]=1 s[0]=0 | Inputs: a[0]=0 a[1]=0 a[2]=1 a[3]=0
-        | out_gate=1 | out_dataflow=1 | out_behavioral=1 | out_structural=1
-Time=10 | s[1]=1 s[0]=1 | Inputs: a[0]=0 a[1]=0 a[2]=0 a[3]=1
-        | out_gate=1 | out_dataflow=1 | out_behavioral=1 | out_structural=1
-Time=12 | s[1]=0 s[0]=1 | Inputs: a[0]=0 a[1]=0 a[2]=1 a[3]=1
-        | out_gate=0 | out_dataflow=0 | out_behavioral=0 | out_structural=0
-Time=14 | s[1]=1 s[0]=0 | Inputs: a[0]=0 a[1]=1 a[2]=0 a[3]=1
-        | out_gate=0 | out_dataflow=0 | out_behavioral=0 | out_structural=0
-Time=16 | s[1]=1 s[0]=1 | Inputs: a[0]=0 a[1]=1 a[2]=1 a[3]=0
-        | out_gate=0 | out_dataflow=0 | out_behavioral=0 | out_structural=0
-Time=18 | s[1]=0 s[0]=0 | Inputs: a[0]=1 a[1]=1 a[2]=1 a[3]=1
-        | out_gate=1 | out_dataflow=1 | out_behavioral=1 | out_structural=1
-
+Time=00 | S1=0 S2=0 | Inputs: I0=1 I1=0 I2=1 I3=0
+        | out_gate=1
+Time=100 | S1=0 S2=1 | Inputs: I0=1 I1=0 I2=1 I3=0
+        | out_gate=0
+Time=200 | S1=1 S2=0 | Inputs: I0=1 I1=0 I2=1 I3=0
+        | out_gate=1
+Time=300 | S1=1 S2=1 | Inputs: I0=1 I1=0 I2=1 I3=0
+        | out_gate=0
+```
+**4:1 MUX Data Flow Implementation**
+```
+Time=00 | s[1]=0 s[0]=0 | Inputs: a=1 b=0 c=1 d=0
+        | out_dataflow=1
+Time=100 | s[1]=0 s[0]=1 | Inputs: a=1 b=0 c=1 d=0
+        | out_dataflow=0
+Time=200 | s[1]=1 s[0]=0 | Inputs: a=1 b=0 c=1 d=0
+        | out_dataflow=1
+Time=300 | s[1]=1 s[0]=1 | Inputs: a=1 b=0 c=1 d=0
+        | out_dataflow=0
+```
+**4:1 MUX Behavioral Implementation**
+```
+Time=00 | S[1]=0 S[0]=0 | Inputs: I[0]=1 I[1]=0 I[2]=1 I[3]=0
+        | out_behavioral=1
+Time=100 | S[1]=0 S[0]=1 | Inputs: I[0]=1 I[1]=0 I[2]=1 I[3]=0
+        | out_behavioral=0
+Time=200 | S[1]=1 S[0]=0 | Inputs: I[0]=1 I[1]=0 I[2]=1 I[3]=0
+        | out_behavioral=1
+Time=300 | S[1]=1 S[0]=1 | Inputs: I[0]=1 I[1]=0 I[2]=1 I[3]=0
+        | out_behavioral=0
+```
+**4:1 MUX Structural Implementation**
+```
+Time=00 | S[1]=0 S[0]=0 | Inputs: I[0]=1 I[1]=0 I[2]=1 I[3]=0
+        | out_structural=1
+Time=100 | S[1]=0 S[0]=1 | Inputs: I[0]=1 I[1]=0 I[2]=1 I[3]=0
+        | out_structural=0
+Time=200 | S[1]=1 S[0]=0 | Inputs: I[0]=1 I[1]=0 I[2]=1 I[3]=0
+        | out_structural=1
+Time=300 | S[1]=1 S[0]=1 | Inputs: I[0]=1 I[1]=0 I[2]=1 I[3]=0
+        | out_structural=0
 ```
 **Output waveform**
 **Gate Level**
-<img width="1920" height="1080" alt="Screenshot 2025-09-02 175315" src="https://github.com/user-attachments/assets/7885795c-5d66-486e-92e9-d213e5a884a4" />
+<img width="1915" height="1078" alt="image" src="https://github.com/user-attachments/assets/4ffe33fc-3e39-4f9f-a92c-f3c82e2bebd4" />
 
 **Data Flow**
-<img width="1920" height="1080" alt="Screenshot 2025-09-02 175911" src="https://github.com/user-attachments/assets/9e0136db-9bb0-4eab-85da-9f449905d16d" />
+<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/a189ff52-b0c5-49a9-813b-1018bdac2b41" />
 
 **Behavioral**
-<img width="1920" height="1080" alt="Screenshot 2025-09-02 180033" src="https://github.com/user-attachments/assets/e91c9834-1c11-447e-86f7-74bc0c0ff007" />
+<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/9283e2be-8179-4d9e-9ad2-56116c7dac7e" />
 
 **Structural**
-<img width="1920" height="1080" alt="Screenshot 2025-09-02 180212" src="https://github.com/user-attachments/assets/4bd29749-2a4a-43cb-8267-bf793e1db95a" />
+<img width="1906" height="1079" alt="image" src="https://github.com/user-attachments/assets/322d088e-a7f3-40b5-9cb0-f3339572a822" />
 
 
 **Conclusion:** <br>
