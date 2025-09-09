@@ -285,16 +285,16 @@ Time=300 | S[1]=1 S[0]=1 | Inputs: I[0]=1 I[1]=0 I[2]=1 I[3]=0
 ```
 **Output waveform**
 **Gate Level**
-<img width="1915" height="1078" alt="image" src="https://github.com/user-attachments/assets/4ffe33fc-3e39-4f9f-a92c-f3c82e2bebd4" />
+<img width="1920" height="1080" alt="Screenshot 2025-09-09 145619" src="https://github.com/user-attachments/assets/d0279141-f282-4a9c-88b6-c70bbbef47fb" />
 
 **Data Flow**
-<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/a189ff52-b0c5-49a9-813b-1018bdac2b41" />
+<img width="1920" height="1080" alt="Screenshot 2025-09-09 145804" src="https://github.com/user-attachments/assets/b15fe2f0-00a2-460f-892f-036b1aba7929" />
 
 **Behavioral**
-<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/9283e2be-8179-4d9e-9ad2-56116c7dac7e" />
+<img width="1920" height="1080" alt="Screenshot 2025-09-09 150017" src="https://github.com/user-attachments/assets/6a238cc8-6343-4e3f-95c9-a1e8c526f720" />
 
 **Structural**
-<img width="1906" height="1079" alt="image" src="https://github.com/user-attachments/assets/322d088e-a7f3-40b5-9cb0-f3339572a822" />
+<img width="1920" height="1080" alt="Screenshot 2025-09-09 150257" src="https://github.com/user-attachments/assets/086d11b4-3ec0-4d91-8e88-1663896d2a83" />
 
 
 **Conclusion:** <br>
